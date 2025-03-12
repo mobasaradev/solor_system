@@ -2,6 +2,8 @@
 
 This project is a **3D interactive solar system** built using **Three.js**. It allows users to rotate, zoom, and move freely to explore planets in real-time.
 
+- [See The Solar-System](https://mobasaradev.github.io/solor_system/) (for 3D rendering)
+
 ## Features
 - 🌍 **Realistic 3D planets** with accurate textures.
 - 🌀 **Dynamic orbits** for each planet.
