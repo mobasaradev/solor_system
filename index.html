@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Solar System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; color: white; }
+        canvas { display: block; }
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .label {
+            position: absolute;
+            color: white;
+            font-size: 6px;
+            pointer-events: auto;
+            transition: transform 0.2s ease, font-size 0.2s ease, opacity 0.2s ease;
+        }
+        .label:hover {
+            transform: scale(1.5);
+            font-size: 10px;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">3D Solar System</div>
+    <script>
+        // Scene Setup
+        const scene = new THREE.Scene();
+    scene.background = new THREE.TextureLoader().load('images/bg.png');
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Camera Controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Light Setup
+    const light = new THREE.PointLight(0xffffff, 2, 500);
+    light.position.set(0, 0, 0);
+    scene.add(light);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    // Texture Loader
+    const textureLoader = new THREE.TextureLoader();
+
+    // Sun
+    const sunGeometry = new THREE.SphereGeometry(5, 64, 64);
+    const sunMaterial = new THREE.MeshStandardMaterial({
+      emissive: 0xffcc00,
+      emissiveIntensity: 1.5,
+      map: textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/9/99/Sun_texture.jpg')
+    });
+    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+    scene.add(sun);
+
+    // Function to create orbit circles
+    function createOrbit(distance) {
+      const orbitGeometry = new THREE.RingGeometry(distance - 0.2, distance + 0.2, 128);
+      const orbitMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide, transparent: true, opacity: 0.3 });
+      const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+      orbit.rotation.x = Math.PI / 2;
+      scene.add(orbit);
+    }
+
+    // Planets Data
+    const planets = [];
+    const labels = [];
+    const planetsData = [
+      { name: 'Mercury', size: 2, distance: 8, speed: 0.004, texture: 'https://upload.wikimedia.org/wikipedia/commons/8/88/Mercury_color_image.jpg' },
+      { name: 'Venus', size: 3, distance: 12, speed: 0.0015, texture: 'https://upload.wikimedia.org/wikipedia/commons/8/85/Venus_globe.jpg' },
+      { name: 'Earth', size: 4, distance: 16, speed: 0.001, texture: 'https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg' },
+      { name: 'Mars', size: 2.5, distance: 20, speed: 0.0008, texture: 'https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg' },
+      { name: 'Jupiter', size: 6, distance: 28, speed: 0.0004, texture: 'https://upload.wikimedia.org/wikipedia/commons/e/e2/Jupiter.jpg' },
+      { name: 'Saturn', size: 5, distance: 38, speed: 0.0002, texture: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox.jpg' },
+      { name: 'Uranus', size: 4.5, distance: 48, speed: 0.0001, texture: 'https://upload.wikimedia.org/wikipedia/commons/3/3d/Uranus2.jpg' },
+      { name: 'Neptune', size: 4, distance: 56, speed: 0.00007, texture: 'https://upload.wikimedia.org/wikipedia/commons/5/56/Neptune_Full.jpg' }
+    ];
+
+    planetsData.forEach(data => {
+      createOrbit(data.distance);
+      const geometry = new THREE.SphereGeometry(data.size, 64, 64);
+      const material = new THREE.MeshStandardMaterial({ map: textureLoader.load(data.texture) });
+      const planet = new THREE.Mesh(geometry, material);
+      planet.position.set(data.distance, 0, 0);
+      scene.add(planet);
+      planets.push({ mesh: planet, data });
+
+      // Create Labels
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.innerHTML = `${data.name} (${data.distance} AU)`;
+      document.body.appendChild(label);
+      labels.push({ element: label, planet: planet });
+    });
+
+    // Animation Loop with Moving Labels
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+
+      planets.forEach(planet => {
+        planet.mesh.rotation.y += 0.01;
+        planet.mesh.position.x = planet.data.distance * Math.cos(Date.now() * planet.data.speed);
+        planet.mesh.position.z = planet.data.distance * Math.sin(Date.now() * planet.data.speed);
+      });
+
+      labels.forEach(labelObj => {
+        const vector = labelObj.planet.position.clone().project(camera);
+        labelObj.element.style.left = `${(vector.x + 1) * window.innerWidth / 2}px`;
+        labelObj.element.style.top = `${(-vector.y + 1) * window.innerHeight / 2}px`;
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    // Adjusting camera position to match reference UI
+    camera.position.set(10, 40, 100);
+    camera.lookAt(0, 0, 0);
+    animate();
+  </script>
+</body>
+
+</html>
